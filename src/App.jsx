@@ -1,5 +1,5 @@
 // src/App.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import WelcomeScreen from './components/WelcomeScreen';
 import FileTree from './components/FileTree';
 import SettingsPanel from './components/SettingsPanel';
@@ -24,6 +24,33 @@ const App = () => {
     autoSave: true,
     viewMode: 'editor'
   });
+
+  // load settings on startup
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const savedSettings = await window.electronAPI.loadSettings();
+        setSettings(savedSettings);
+      } catch (error) {
+        console.error('Error loading settings:', error);
+      }
+    };
+    
+    loadSettings();
+  }, []);
+
+  // save settings when they change
+  useEffect(() => {
+    const saveSettings = async () => {
+      try {
+        await window.electronAPI.saveSettings(settings);
+      } catch (error) {
+        console.error('Error saving settings:', error);
+      }
+    };
+    
+    saveSettings();
+  }, [settings]);
 
   const currentTheme = themes[settings.theme];
 

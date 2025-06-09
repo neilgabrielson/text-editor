@@ -2,6 +2,7 @@
 const { app, BrowserWindow, ipcMain, dialog } = require('electron');
 const path = require('path');
 const fs = require('fs').promises;
+const os = require('os'); // Add this line
 
 let mainWindow;
 
@@ -73,6 +74,36 @@ ipcMain.handle('write-file', async (event, filePath, content) => {
     return true;
   } catch (error) {
     console.error('Error writing file:', error);
+    return false;
+  }
+});
+
+// Settings file path
+const settingsPath = path.join(os.homedir(), '.text-editor-settings.json');
+
+ipcMain.handle('load-settings', async () => {
+  try {
+    const settingsData = await fs.readFile(settingsPath, 'utf8');
+    return JSON.parse(settingsData);
+  } catch (error) {
+    // Return default settings if file doesn't exist
+    return {
+      fontFamily: 'Georgia, serif',
+      fontSize: 16,
+      lineHeight: 1.6,
+      theme: 'cream',
+      autoSave: true,
+      viewMode: 'editor'
+    };
+  }
+});
+
+ipcMain.handle('save-settings', async (event, settings) => {
+  try {
+    await fs.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+    return true;
+  } catch (error) {
+    console.error('Error saving settings:', error);
     return false;
   }
 });
