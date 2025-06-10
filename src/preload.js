@@ -7,5 +7,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   readFile: (path) => ipcRenderer.invoke('read-file', path),
   writeFile: (path, content) => ipcRenderer.invoke('write-file', path, content),
   loadSettings: () => ipcRenderer.invoke('load-settings'),
-  saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings)
+  saveSettings: (settings) => ipcRenderer.invoke('save-settings', settings),
+  debugPaths: () => ipcRenderer.invoke('debug-paths')
 });

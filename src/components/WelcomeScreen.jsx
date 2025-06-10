@@ -1,7 +1,7 @@
 // src/components/WelcomeScreen.jsx
 import React, { useState } from 'react';
 
-const WelcomeScreen = ({ onOpenFolder }) => {
+const WelcomeScreen = ({ onOpenFolder, theme }) => {
   const [isDragging, setIsDragging] = useState(false);
 
   const handleDragOver = (e) => {
@@ -45,32 +45,37 @@ const WelcomeScreen = ({ onOpenFolder }) => {
         flexDirection: 'column', 
         alignItems: 'center', 
         justifyContent: 'center',
-        height: '100%',
-        color: '#666',
+        height: '100vh',
+        backgroundColor: theme.background,
+        color: theme.text,
         fontSize: '18px',
-        border: isDragging ? '2px dashed #007acc' : '2px dashed transparent',
-        backgroundColor: isDragging ? '#f0f8ff' : 'transparent',
+        border: isDragging ? `2px dashed ${theme.text}` : '2px dashed transparent',
         transition: 'all 0.2s ease'
       }}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
-      <h1 style={{ color: '#333', marginBottom: '30px' }}>Welcome to Your Text Editor</h1>
+      <h1 style={{ color: theme.text, marginBottom: '30px' }}>Welcome to Your Text Editor</h1>
       <button 
         onClick={onOpenFolder}
         style={{ 
           padding: '12px 24px', 
           fontSize: '16px', 
           marginBottom: '10px',
-          cursor: 'pointer'
+          cursor: 'pointer',
+          backgroundColor: theme.sidebar,
+          color: theme.text,
+          border: `1px solid ${theme.border}`,
+          borderRadius: '4px'
         }}
       >
         📁 Open Folder
       </button>
-      <p style={{ margin: '20px 0', color: '#999' }}>or</p>
+      <p style={{ margin: '20px 0', color: theme.text, opacity: 0.7 }}>or</p>
       <p style={{ 
-        color: isDragging ? '#007acc' : '#999',
+        color: isDragging ? theme.text : theme.text,
+        opacity: isDragging ? 1 : 0.7,
         fontWeight: isDragging ? 'bold' : 'normal'
       }}>
         {isDragging ? '📁 Drop folder here!' : 'Drag & drop a folder here'}

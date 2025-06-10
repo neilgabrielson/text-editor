@@ -2,11 +2,12 @@
 import React from 'react';
 
 const FileTree = ({ 
-  files, 
+  files = [], 
   currentFile, 
   onFileSelect, 
   onToggleSidebar, 
-  theme 
+  theme = { background: '#faf8f5', text: '#2c2c2c', sidebar: '#f5f5f5', border: '#e0e0e0' }, 
+  fileHasUnsavedChanges = () => false 
 }) => {
   return (
     <div style={{ 
@@ -27,6 +28,7 @@ const FileTree = ({
             fontSize: '16px',
             color: theme.text
           }}
+          title="Hide sidebar (⌘B)"
         >
           ←
         </button>
@@ -43,11 +45,37 @@ const FileTree = ({
               backgroundColor: file.path === currentFile ? '#007acc' : 'transparent',
               color: file.path === currentFile ? 'white' : theme.text,
               borderRadius: '3px',
-              margin: '2px 0'
+              margin: '2px 0',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
             }}
           >
-            {file.isDirectory ? '📁' : '📄'} {file.name}
-            {file.name.endsWith('.md') && <span style={{ opacity: 0.7, fontSize: '12px' }}> MD</span>}
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <span style={{ marginRight: '8px' }}>
+                {file.isDirectory ? '📁' : '📄'}
+              </span>
+              <span>
+                {file.name}
+                {file.name.endsWith('.md') && (
+                  <span style={{ opacity: 0.7, fontSize: '12px', marginLeft: '6px' }}>
+                    MD
+                  </span>
+                )}
+              </span>
+            </div>
+            
+            {/* Unsaved changes indicator */}
+            {!file.isDirectory && fileHasUnsavedChanges(file.path) && (
+              <span style={{ 
+                color: '#ff6b6b', 
+                fontSize: '14px', 
+                fontWeight: 'bold',
+                marginLeft: '8px'
+              }}>
+                ●
+              </span>
+            )}
           </div>
         ))}
       </div>

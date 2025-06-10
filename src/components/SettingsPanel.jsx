@@ -1,33 +1,51 @@
 // src/components/SettingsPanel.jsx
 import React from 'react';
 
-const SettingsPanel = ({ settings, onSettingsChange, onClose }) => (
+const SettingsPanel = ({ settings, onSettingsChange, onClose, theme }) => (
   <div style={{
     position: 'fixed',
     top: 0,
     right: 0,
     height: '100vh',
     width: '300px',
-    backgroundColor: '#f8f8f8',
-    borderLeft: '1px solid #ccc',
+    backgroundColor: theme.sidebar,
+    borderLeft: `1px solid ${theme.border}`,
     padding: '20px',
     boxShadow: '-5px 0 15px rgba(0,0,0,0.1)',
-    zIndex: 1000
+    zIndex: 1000,
+    color: theme.text
   }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-      <h3 style={{ margin: 0 }}>Settings</h3>
-      <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '18px' }}>
+      <h3 style={{ margin: 0, color: theme.text }}>Settings</h3>
+      <button 
+        onClick={onClose} 
+        style={{ 
+          background: 'none', 
+          border: 'none', 
+          cursor: 'pointer', 
+          fontSize: '18px',
+          color: theme.text
+        }}
+      >
         ×
       </button>
     </div>
     
     {/* View Mode */}
     <div style={{ marginBottom: '20px' }}>
-      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>View Mode</label>
+      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: theme.text }}>View Mode</label>
       <select 
         value={settings.viewMode} 
         onChange={(e) => onSettingsChange({...settings, viewMode: e.target.value})}
-        style={{ width: '100%', padding: '8px', fontSize: '14px' }}
+        style={{ 
+          width: '100%', 
+          padding: '8px', 
+          fontSize: '14px',
+          backgroundColor: theme.background,
+          color: theme.text,
+          border: `1px solid ${theme.border}`,
+          borderRadius: '4px'
+        }}
       >
         <option value="editor">Editor Only</option>
         <option value="preview">Preview Only</option>
@@ -37,11 +55,19 @@ const SettingsPanel = ({ settings, onSettingsChange, onClose }) => (
 
     {/* Font Family */}
     <div style={{ marginBottom: '20px' }}>
-      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Font Family</label>
+      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: theme.text }}>Font Family</label>
       <select 
         value={settings.fontFamily} 
         onChange={(e) => onSettingsChange({...settings, fontFamily: e.target.value})}
-        style={{ width: '100%', padding: '8px', fontSize: '14px' }}
+        style={{ 
+          width: '100%', 
+          padding: '8px', 
+          fontSize: '14px',
+          backgroundColor: theme.background,
+          color: theme.text,
+          border: `1px solid ${theme.border}`,
+          borderRadius: '4px'
+        }}
       >
         <option value="Georgia, serif">Georgia (Serif)</option>
         <option value="Times, serif">Times (Serif)</option>
@@ -53,7 +79,7 @@ const SettingsPanel = ({ settings, onSettingsChange, onClose }) => (
 
     {/* Font Size */}
     <div style={{ marginBottom: '20px' }}>
-      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: theme.text }}>
         Font Size: {settings.fontSize}px
       </label>
       <input 
@@ -68,7 +94,7 @@ const SettingsPanel = ({ settings, onSettingsChange, onClose }) => (
 
     {/* Line Height */}
     <div style={{ marginBottom: '20px' }}>
-      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>
+      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: theme.text }}>
         Line Height: {settings.lineHeight}
       </label>
       <input 
@@ -84,11 +110,19 @@ const SettingsPanel = ({ settings, onSettingsChange, onClose }) => (
 
     {/* Theme */}
     <div style={{ marginBottom: '20px' }}>
-      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold' }}>Theme</label>
+      <label style={{ display: 'block', marginBottom: '8px', fontWeight: 'bold', color: theme.text }}>Theme</label>
       <select 
         value={settings.theme} 
         onChange={(e) => onSettingsChange({...settings, theme: e.target.value})}
-        style={{ width: '100%', padding: '8px', fontSize: '14px' }}
+        style={{ 
+          width: '100%', 
+          padding: '8px', 
+          fontSize: '14px',
+          backgroundColor: theme.background,
+          color: theme.text,
+          border: `1px solid ${theme.border}`,
+          borderRadius: '4px'
+        }}
       >
         <option value="cream">Cream</option>
         <option value="dark">Dark</option>
@@ -98,7 +132,7 @@ const SettingsPanel = ({ settings, onSettingsChange, onClose }) => (
 
     {/* Auto-save */}
     <div style={{ marginBottom: '20px' }}>
-      <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'bold' }}>
+      <label style={{ display: 'flex', alignItems: 'center', fontWeight: 'bold', color: theme.text }}>
         <input 
           type="checkbox" 
           checked={settings.autoSave}

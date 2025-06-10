@@ -11,10 +11,12 @@ const App = () => {
   const [currentFolder, setCurrentFolder] = useState(null);
   const [files, setFiles] = useState([]);
   const [currentFile, setCurrentFile] = useState(null);
-  const [content, setContent] = useState('');
-  const [originalContent, setOriginalContent] = useState('');
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [settingsVisible, setSettingsVisible] = useState(false);
+  
+  // Store content for all opened files
+  const [fileContents, setFileContents] = useState({}); // current content
+  const [originalContents, setOriginalContents] = useState({}); // original content from disk
   
   const [settings, setSettings] = useState({
     fontFamily: 'Georgia, serif',
@@ -25,22 +27,30 @@ const App = () => {
     viewMode: 'editor'
   });
 
+  const [settingsLoaded, setSettingsLoaded] = useState(false); // Track if settings have been loaded
+
   // load settings on startup
   useEffect(() => {
     const loadSettings = async () => {
       try {
         const savedSettings = await window.electronAPI.loadSettings();
-        setSettings(savedSettings);
+        if (savedSettings) {
+          setSettings(savedSettings);
+        }
+        setSettingsLoaded(true);
       } catch (error) {
         console.error('Error loading settings:', error);
+        setSettingsLoaded(true);
       }
     };
     
     loadSettings();
   }, []);
 
-  // save settings when they change
+  // save settings when they change (but only after initial load)
   useEffect(() => {
+    if (!settingsLoaded) return; // Don't save until we've loaded initial settings
+    
     const saveSettings = async () => {
       try {
         await window.electronAPI.saveSettings(settings);
@@ -50,9 +60,56 @@ const App = () => {
     };
     
     saveSettings();
-  }, [settings]);
+  }, [settings, settingsLoaded]);
 
-  const currentTheme = themes[settings.theme];
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      const isMac = navigator.platform.toUpperCase().indexOf('MAC') >= 0;
+      const cmdOrCtrl = isMac ? e.metaKey : e.ctrlKey;
+      
+      if (cmdOrCtrl) {
+        switch (e.key) {
+          case 's':
+            e.preventDefault();
+            if (e.shiftKey) {
+              // Cmd+Shift+S - Save all files
+              saveAllFiles();
+            } else {
+              // Cmd+S - Save current file
+              if (currentFile && hasUnsavedChanges) {
+                saveFile();
+              }
+            }
+            break;
+          case ',':
+            e.preventDefault();
+            // Cmd+, - Toggle settings
+            setSettingsVisible(prev => !prev);
+            break;
+          case 'b':
+            e.preventDefault();
+            // Cmd+B - Toggle sidebar
+            if (currentFolder) {
+              setSidebarVisible(prev => !prev);
+            }
+            break;
+          case 'w':
+            e.preventDefault();
+            // Cmd+W - Close folder
+            if (currentFolder) {
+              closeFolder();
+            }
+            break;
+        }
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [currentFile, hasUnsavedChanges, currentFolder, saveFile, saveAllFiles, closeFolder]);
+
+  const currentTheme = themes[settings.theme] || themes.cream; // Fallback to cream theme
 
   const openFolder = async (folderPath = null, fileList = null) => {
     try {
@@ -73,46 +130,101 @@ const App = () => {
     }
   };
 
+  const closeFolder = () => {
+    setCurrentFolder(null);
+    setFiles([]);
+    setCurrentFile(null);
+    setFileContents({});
+    setOriginalContents({});
+    setSidebarVisible(true);
+  };
+
   const openFile = async (filePath) => {
     if (!filePath.endsWith('.md') && !filePath.endsWith('.txt')) {
       return;
     }
     
     try {
+      // If we already have content for this file, use it
+      if (fileContents[filePath] !== undefined) {
+        setCurrentFile(filePath);
+        return;
+      }
+      
+      // Otherwise, load from disk
       const fileContent = await window.electronAPI.readFile(filePath);
       setCurrentFile(filePath);
-      setContent(fileContent);
-      setOriginalContent(fileContent);
+      setFileContents(prev => ({
+        ...prev,
+        [filePath]: fileContent
+      }));
+      setOriginalContents(prev => ({
+        ...prev,
+        [filePath]: fileContent
+      }));
     } catch (error) {
       console.error('Error opening file:', error);
     }
   };
 
-  const saveFile = async () => {
-    if (currentFile && hasUnsavedChanges) {
-      try {
-        await window.electronAPI.writeFile(currentFile, content);
-        setOriginalContent(content);
-        console.log('File saved!');
-      } catch (error) {
-        console.error('Error saving file:', error);
-      }
+  const saveFile = async (filePath = currentFile) => {
+    if (!filePath || !fileContents[filePath]) return;
+    
+    try {
+      await window.electronAPI.writeFile(filePath, fileContents[filePath]);
+      setOriginalContents(prev => ({
+        ...prev,
+        [filePath]: fileContents[filePath]
+      }));
+      console.log('File saved!');
+    } catch (error) {
+      console.error('Error saving file:', error);
     }
   };
 
+  const updateFileContent = (content) => {
+    if (!currentFile) return;
+    setFileContents(prev => ({
+      ...prev,
+      [currentFile]: content
+    }));
+  };
+
+  // Get current file content
+  const currentContent = currentFile ? (fileContents[currentFile] || '') : '';
+  const currentOriginalContent = currentFile ? (originalContents[currentFile] || '') : '';
+
   const hasUnsavedChanges = useAutoSave(
-    content, 
-    originalContent, 
+    currentContent, 
+    currentOriginalContent, 
     currentFile, 
     settings.autoSave, 
     saveFile
   );
 
+  // Check if any file has unsaved changes
+  const fileHasUnsavedChanges = (filePath) => {
+    const current = fileContents[filePath];
+    const original = originalContents[filePath];
+    return current !== undefined && original !== undefined && current !== original;
+  };
+
+  // Save all files with unsaved changes
+  const saveAllFiles = async () => {
+    const filesToSave = Object.keys(fileContents).filter(filePath => 
+      fileHasUnsavedChanges(filePath)
+    );
+    
+    for (const filePath of filesToSave) {
+      await saveFile(filePath);
+    }
+  };
+
   const renderEditor = () => {
     if (settings.viewMode === 'preview') {
       return (
         <MarkdownPreview
-          content={content}
+          content={currentContent}
           theme={currentTheme}
           fontSize={settings.fontSize}
           fontFamily={settings.fontFamily}
@@ -125,8 +237,8 @@ const App = () => {
       return (
         <div style={{ display: 'flex', flex: 1 }}>
           <textarea 
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
+            value={currentContent}
+            onChange={(e) => updateFileContent(e.target.value)}
             placeholder="Start typing markdown..."
             style={{ 
               flex: 1,
@@ -143,7 +255,7 @@ const App = () => {
             }}
           />
           <MarkdownPreview
-            content={content}
+            content={currentContent}
             theme={currentTheme}
             fontSize={settings.fontSize}
             fontFamily={settings.fontFamily}
@@ -155,8 +267,8 @@ const App = () => {
 
     return (
       <textarea 
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
+        value={currentContent}
+        onChange={(e) => updateFileContent(e.target.value)}
         placeholder="Start typing markdown..."
         style={{ 
           flex: 1,
@@ -175,7 +287,7 @@ const App = () => {
   };
 
   if (!currentFolder) {
-    return <WelcomeScreen onOpenFolder={openFolder} />;
+    return <WelcomeScreen onOpenFolder={openFolder} theme={currentTheme} />;
   }
 
   return (
@@ -187,6 +299,7 @@ const App = () => {
           onFileSelect={openFile}
           onToggleSidebar={() => setSidebarVisible(false)}
           theme={currentTheme}
+          fileHasUnsavedChanges={fileHasUnsavedChanges}
         />
       )}
       
@@ -211,6 +324,7 @@ const App = () => {
                 marginRight: '10px',
                 color: currentTheme.text
               }}
+              title="Show sidebar (⌘B)"
             >
               →
             </button>
@@ -229,7 +343,7 @@ const App = () => {
               </span>
               
               <button 
-                onClick={saveFile}
+                onClick={() => saveFile()}
                 disabled={!hasUnsavedChanges}
                 style={{ 
                   marginLeft: '10px',
@@ -241,9 +355,30 @@ const App = () => {
                   cursor: hasUnsavedChanges ? 'pointer' : 'default',
                   opacity: hasUnsavedChanges ? 1 : 0.7
                 }}
+                title={`${hasUnsavedChanges ? '● Unsaved' : '✓ Saved'} (⌘S)`}
               >
                 {hasUnsavedChanges ? '● Unsaved' : '✓ Saved'}
               </button>
+
+              {/* Save All button if multiple files have changes */}
+              {Object.keys(fileContents).filter(filePath => fileHasUnsavedChanges(filePath)).length > 1 && (
+                <button 
+                  onClick={saveAllFiles}
+                  style={{ 
+                    marginLeft: '10px',
+                    backgroundColor: '#ffa500',
+                    color: 'white',
+                    border: 'none',
+                    padding: '6px 12px',
+                    borderRadius: '4px',
+                    cursor: 'pointer',
+                    fontSize: '12px'
+                  }}
+                  title="Save all modified files (⌘⇧S)"
+                >
+                  Save All
+                </button>
+              )}
               
               <button 
                 onClick={() => setSettingsVisible(true)}
@@ -255,8 +390,28 @@ const App = () => {
                   fontSize: '16px',
                   color: currentTheme.text
                 }}
+                title="Settings (⌘,)"
               >
                 ⚙️
+              </button>
+
+              {/* Close Folder button moved to far right */}
+              <button 
+                onClick={closeFolder}
+                style={{ 
+                  marginLeft: '15px',
+                  background: 'none',
+                  border: `1px solid ${currentTheme.border}`,
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  color: currentTheme.text,
+                  opacity: 0.7,
+                  padding: '4px 8px',
+                  borderRadius: '3px'
+                }}
+                title="Close folder and return to welcome screen (⌘W)"
+              >
+                Close Folder
               </button>
             </>
           ) : (
@@ -271,8 +426,27 @@ const App = () => {
                   fontSize: '16px',
                   color: currentTheme.text
                 }}
+                title="Settings (⌘,)"
               >
                 ⚙️
+              </button>
+              
+              <button 
+                onClick={closeFolder}
+                style={{ 
+                  marginLeft: '15px',
+                  background: 'none',
+                  border: `1px solid ${currentTheme.border}`,
+                  cursor: 'pointer',
+                  fontSize: '12px',
+                  color: currentTheme.text,
+                  opacity: 0.7,
+                  padding: '4px 8px',
+                  borderRadius: '3px'
+                }}
+                title="Close folder and return to welcome screen (⌘W)"
+              >
+                Close Folder
               </button>
             </>
           )}
@@ -301,6 +475,7 @@ const App = () => {
           settings={settings}
           onSettingsChange={setSettings}
           onClose={() => setSettingsVisible(false)}
+          theme={currentTheme}
         />
       )}
     </div>
